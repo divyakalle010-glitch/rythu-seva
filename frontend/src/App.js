@@ -1,24 +1,75 @@
-import React from 'react';
+import React, { useState } from 'react';
+import Header from './components/Header';
+import Footer from './components/Footer';
+import LoginForm from './components/LoginForm';
+import OTPForm from './components/OTPForm';
+import Dashboard from './components/Dashboard';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import './App.css';
+
+function AppContent() {
+  const { user, sendOTP, verifyOTP, registerFarmer, loading, error } = useAuth();
+  const [step, setStep] = useState('login'); // login, otp, register, dashboard
+  const [mobile, setMobile] = useState('');
+
+  const handleSendOTP = async (mobileNumber) => {
+    const success = await sendOTP(mobileNumber);
+    if (success) {
+      setMobile(mobileNumber);
+      setStep('otp');
+    }
+  };
+
+  const handleVerifyOTP = async (otp) => {
+    const result = await verifyOTP(mobile, otp);
+    if (result) {
+      if (result.isNewFarmer) {
+        setStep('register');
+      } else {
+        setStep('dashboard');
+      }
+    }
+  };
+
+  if (user) {
+    return (
+      <div className="flex flex-col min-h-screen">
+        <Header />
+        <main className="flex-grow bg-gray-50">
+          <Dashboard farmer={user} />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <Header />
+      <main className="flex-grow bg-gray-50 py-8">
+        {step === 'login' && (
+          <LoginForm onSubmit={handleSendOTP} loading={loading} error={error} />
+        )}
+        {step === 'otp' && (
+          <OTPForm
+            mobile={mobile}
+            onSubmit={handleVerifyOTP}
+            loading={loading}
+            error={error}
+            onBack={() => setStep('login')}
+          />
+        )}
+      </main>
+      <Footer />
+    </div>
+  );
+}
 
 function App() {
   return (
-    <div className="App">
-      <header className="bg-[#166534] text-white p-4">
-        <div className="flex items-center justify-center">
-          <span className="text-4xl mr-3">🌾</span>
-          <h1 className="text-2xl font-bold">RYTHU SEVA</h1>
-        </div>
-        <p className="text-center text-sm mt-2">Plan Your Visit, Skip the Wait</p>
-      </header>
-      <main className="p-4">
-        <div className="bg-white rounded-lg shadow p-6 text-center">
-          <h2 className="text-2xl font-bold text-[#166534] mb-4">Welcome to RYTHU SEVA</h2>
-          <p className="text-[#64748b] mb-4">Agricultural Procurement Management Platform</p>
-          <p className="text-[#172033]">Development in progress...</p>
-        </div>
-      </main>
-    </div>
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 
